@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster as build
+FROM python:3.10-slim-buster as build
 
 WORKDIR /opt/CTFd
 
@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
     done;
 
 
-FROM python:3.9-slim-buster as release
+FROM python:3.10-slim-buster as release
 WORKDIR /opt/CTFd
 
 # hadolint ignore=DL3008
