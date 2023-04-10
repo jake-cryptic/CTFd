@@ -5,6 +5,7 @@ CTFd/*.db
 CTFd/uploads/**/*
 .ctfd_secret_key
 .data
+.idea
 .git
 .codecov.yml
 .dockerignore
@@ -17,3 +18,4 @@ CTFd/uploads/**/*
 **/__pycache__
 .venv*
 venv*
+Vagrantfile

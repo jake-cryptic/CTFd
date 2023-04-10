@@ -1,7 +1,8 @@
-version: '2'
+version: '3.8'
 
 services:
   ctfd:
+    container_name: ctfd_app
     build: .
     user: root
     restart: always
@@ -23,10 +24,10 @@ services:
     depends_on:
       - db
     networks:
-        default:
         internal:
 
   nginx:
+    container_name: ctfd_nginx
     image: nginx:stable-alpine3.17-slim
     restart: always
     volumes:
@@ -35,8 +36,12 @@ services:
       - 80:80
     depends_on:
       - ctfd
+    networks:
+        internal:
+        default:
 
   db:
+    container_name: ctfd_database
     image: mariadb:10.11.2
     restart: always
     environment:
@@ -52,6 +57,7 @@ services:
     command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --wait_timeout=28800, --log-warnings=0]
 
   cache:
+    container_name: ctfd_cache
     image: redis:7.0-alpine3.17
     restart: always
     volumes:
