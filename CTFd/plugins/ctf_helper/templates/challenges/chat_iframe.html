@@ -1,0 +1,13 @@
+{% if chat_id %}
+<div class="chat-iframe-container">
+    <button class="btn btn-secondary"
+            onclick="document.getElementById('chat-iframe-{{ challenge_id }}').classList.toggle('d-none');">
+        Ask Assistant
+    </button>
+    <iframe
+        id="chat-iframe-{{ challenge_id }}"
+        class="chat-iframe d-none"
+        src="{{ frame_url }}?chatId={{ chat_id }}"
+        frameborder="0"></iframe>
+</div>
+{% endif %}
