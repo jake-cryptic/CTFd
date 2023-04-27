@@ -103,32 +103,64 @@ def define_docker_admin(app):
 
         return render_template("docker_config.html", config=dconfig, form=form, repos=selected_repos, info=dinfo)
 
-    @admin_docker_config.route("/admin/docker_config/pull_image", methods=["POST"])
+    @admin_docker_config.route("/admin/docker_config/pull_image", methods=["GET"])
     @admins_only
     def pull_image():
-        if request.method == "POST":
-            docker = DockerConfig.query.filter_by(id=1).first()
+        docker = DockerConfig.query.filter_by(id=1).first()
 
-            if not docker:
-                return jsonify({"error": "Docker configuration not found"}), 404
+        if not docker:
+            return jsonify({"error": "Docker configuration not found"}), 404
 
-            image = request.form.get('image', None)
+        image = request.args.get('image', None)
 
-            if not image:
-                return jsonify({"error": "No image specified"}), 400
+        if not image:
+            return jsonify({"error": "No image specified"}), 400
 
-            try:
-                response = do_request(docker, f"/images/create?fromImage={image}", method="POST")
+        try:
+            response = do_request(docker, f"/images/create?fromImage={image}", method="POST")
 
-                if response.status_code == 200:
-                    return jsonify({"message": "Image pulled successfully"}), 200
-                else:
-                    return jsonify({"error": f"Error pulling image: {response.text}"}), response.status_code
+            if response.status_code == 200:
+                return jsonify({"message": "Image pulled successfully"}), 200
+            else:
+                return jsonify({"error": f"Error pulling image: {response.text}"}), 500
 
-            except Exception as e:
-                return jsonify({"error": f"Error pulling image: {str(e)}"}), 500
-        else:
-            return jsonify({"error": "Invalid request method"}), 405
+        except Exception as e:
+            return jsonify({"error": f"Error pulling image: {str(e)}"}), 500
+
+    @admin_docker_config.route("/admin/docker_config/login", methods=["POST"])
+    @admins_only
+    def docker_login():
+        docker = DockerConfig.query.filter_by(id=1).first()
+
+        if not docker:
+            return jsonify({"error": "Docker configuration not found"}), 404
+
+        username = request.form.get('username', None)
+        password = request.form.get('password', None)
+        registry = request.form.get('registry', None)
+
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+
+        auth_data = {
+            "username": username,
+            "password": password,
+            "serveraddress": registry
+        }
+
+        try:
+            response = do_request(docker, "/auth",
+                                  headers={"Content-Type": "application/json"},
+                                  method="POST",
+                                  data=auth_data)
+
+            if response.status_code == 200:
+                return jsonify({"message": "Docker login successful"}), 200
+            else:
+                return jsonify({"error": f"Error during login: {response.text}"}), 500
+
+        except Exception as e:
+            return jsonify({"error": f"Error during login: {str(e)}"}), 500
 
     app.register_blueprint(admin_docker_config)
 
