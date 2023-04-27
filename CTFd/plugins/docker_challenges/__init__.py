@@ -89,6 +89,25 @@ class DockerConfigForm(BaseForm):
     submit = SubmitField('Submit')
 
 
+def __handle_file_upload(file_key, b_obj, attr_name):
+    if file_key not in request.files:
+        setattr(b_obj, attr_name, '')
+        return
+
+    try:
+        file_content = request.files[file_key].stream.read()
+        if len(file_content) != 0:
+            tmp_file = tempfile.NamedTemporaryFile(mode="wb", dir="/tmp", delete=False)
+            tmp_file.write(file_content)
+            tmp_file.seek(0)
+            setattr(b_obj, attr_name, tmp_file.name)
+            return
+    except Exception as err:
+        print(err)
+
+    setattr(b_obj, attr_name, '')
+
+
 def define_docker_admin(app):
     admin_docker_config = Blueprint('admin_docker_config', __name__, template_folder='templates',
                                     static_folder='assets')
@@ -103,51 +122,25 @@ def define_docker_admin(app):
                 b = docker
             else:
                 b = DockerConfig()
-            try:
-                ca_cert = request.files['ca_cert'].stream.read()
-            except:
-                print(traceback.print_exc())
-                ca_cert = ''
-            try:
-                client_cert = request.files['client_cert'].stream.read()
-            except:
-                print(traceback.print_exc())
-                client_cert = ''
-            try:
-                client_key = request.files['client_key'].stream.read()
-            except:
-                print(traceback.print_exc())
-                client_key = ''
-            if len(ca_cert) != 0: 
-                tmpca = tempfile.NamedTemporaryFile(mode="wb",dir="/tmp", delete=False)
-                tmpca.write(ca_cert)
-                tmpca.seek(0)
-                b.ca_cert = tmpca.name
-            if len(client_cert) != 0:
-                tmpcert = tempfile.NamedTemporaryFile(mode="wb",dir="/tmp", delete=False)
-                tmpcert.write(client_cert)
-                tmpcert.seek(0)
-                b.client_cert = tmpcert.name
-            if len(client_key) != 0: 
-                tmpkey = tempfile.NamedTemporaryFile(mode="wb",dir="/tmp", delete=False)
-                tmpkey.write(client_key)
-                tmpkey.seek(0)
-                b.client_key = tmpkey.name
+
+            __handle_file_upload('ca_cert', b, 'ca_cert')
+            __handle_file_upload('client_cert', b, 'client_cert')
+            __handle_file_upload('client_key', b, 'client_key')
+
             b.hostname = request.form['hostname']
             b.tls_enabled = request.form['tls_enabled']
-            if b.tls_enabled == "True":
-                b.tls_enabled = True
-            else:
-                b.tls_enabled = False
+            b.tls_enabled = b.tls_enabled == "True"
             if not b.tls_enabled:
                 b.ca_cert = None
                 b.client_cert = None
                 b.client_key = None
-            try:
-                b.repositories = ','.join(request.form.to_dict(flat=False)['repositories'])
-            except:
-                print(traceback.print_exc())
+
+            repositories = request.form.to_dict(flat=False).get('repositories', None)
+            if repositories:
+                b.repositories = ','.join(repositories)
+            else:
                 b.repositories = None
+
             db.session.add(b)
             db.session.commit()
             docker = DockerConfig.query.filter_by(id=1).first()
@@ -163,7 +156,7 @@ def define_docker_admin(app):
         dconfig = DockerConfig.query.first()
         try:
             selected_repos = dconfig.repositories
-            if selected_repos == None:
+            if selected_repos is None:
                 selected_repos = list()
         # selected_repos = dconfig.repositories.split(',')
         except:
@@ -229,34 +222,40 @@ def do_request(docker, url, headers=None, method='GET'):
     URL_TEMPLATE = '%s://%s' % (prefix, host)
     try:
         if tls:
-            if (method == 'GET'):
-                r = requests.get(url=f"%s{url}" % URL_TEMPLATE, cert=(docker.client_cert, docker.client_key), verify=False, headers=headers)
-            elif (method == 'DELETE'):
-                r = requests.delete(url=f"%s{url}" % URL_TEMPLATE, cert=(docker.client_cert, docker.client_key), verify=False, headers=headers)
+            if method == 'GET':
+                r = requests.get(url=f"%s{url}" % URL_TEMPLATE,
+                                 cert=(docker.client_cert, docker.client_key), verify=False, headers=headers)
+            elif method == 'DELETE':
+                r = requests.delete(url=f"%s{url}" % URL_TEMPLATE,
+                                    cert=(docker.client_cert, docker.client_key), verify=False, headers=headers)
         else:
-            if (method == 'GET'):
+            if method == 'GET':
                 r = requests.get(url=f"%s{url}" % URL_TEMPLATE, headers=headers)
-            elif (method == 'DELETE'):
+            elif method == 'DELETE':
                 r = requests.delete(url=f"%s{url}" % URL_TEMPLATE, headers=headers)
     except:
         print(traceback.print_exc())
         r = []
     return r
 
+
 # For the Docker Config Page. Gets the Current Repositories available on the Docker Server.
 def get_repositories(docker, tags=False, repos=False):
     r = do_request(docker, '/images/json?all=1')
     result = list()
     for i in r.json():
-        if not i['RepoTags'] == None:
-            if not i['RepoTags'][0].split(':')[0] == '<none>':
-                if repos:
-                    if not i['RepoTags'][0].split(':')[0] in repos:
-                        continue
-                if not tags:
-                    result.append(i['RepoTags'][0].split(':')[0])
-                else:
-                    result.append(i['RepoTags'][0])
+        if i['RepoTags'] is None:
+            continue
+
+        if not i['RepoTags'][0].split(':')[0] == '<none>':
+            if repos:
+                if not i['RepoTags'][0].split(':')[0] in repos:
+                    continue
+            if not tags:
+                result.append(i['RepoTags'][0].split(':')[0])
+            else:
+                result.append(i['RepoTags'][0])
+
     return list(set(result))
 
 
@@ -267,6 +266,7 @@ def get_unavailable_ports(docker):
         if not i['Ports'] == []:
             for p in i['Ports']:
                 result.append(p['PublicPort'])
+
     return result
 
 
@@ -304,11 +304,11 @@ def create_container(docker, image, team, portbl):
     headers = {'Content-Type': "application/json"}
     data = json.dumps({"Image": image, "ExposedPorts": ports, "HostConfig": {"PortBindings": bindings}})
     if tls:
-        r = requests.post(url="%s/containers/create?name=%s" % (URL_TEMPLATE, container_name), cert=(docker.client_cert, docker.client_key),
-                      verify=False, data=data, headers=headers)
+        r = requests.post(url="%s/containers/create?name=%s" % (URL_TEMPLATE, container_name),
+                          cert=(docker.client_cert, docker.client_key), verify=False, data=data, headers=headers)
         result = r.json()
-        s = requests.post(url="%s/containers/%s/start" % (URL_TEMPLATE, result['Id']), cert=(docker.client_cert, docker.client_key), verify=False,
-                          headers=headers)
+        s = requests.post(url="%s/containers/%s/start" % (URL_TEMPLATE, result['Id']),
+                          cert=(docker.client_cert, docker.client_key), verify=False, headers=headers)
     else:
         r = requests.post(url="%s/containers/create?name=%s" % (URL_TEMPLATE, container_name),
                           data=data, headers=headers)
@@ -478,7 +478,7 @@ class DockerChallengeType(BaseChallenge):
         )
         db.session.add(solve)
         db.session.commit()
-        # trying if this solces the detached instance error...
+        # trying if this solves the detached instance error...
         #db.session.close()
 
     @staticmethod
@@ -636,13 +636,13 @@ class DockerAPI(Resource):
             }
         else:
             return {
-                       'success': False,
-                       'data': [
-                           {
-                               'name': 'Error in Docker Config!'
-                           }
-                       ]
-                   }, 400
+               'success': False,
+               'data': [
+                   {
+                       'name': 'Error in Docker Config!'
+                   }
+               ]
+           }, 400
 
 
 def load(app):
