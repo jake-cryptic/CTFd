@@ -1,7 +1,8 @@
 import tempfile
 import traceback
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, jsonify
+from sqlalchemy.exc import InternalError
 
 from CTFd.api import CTFd_API_v1
 from CTFd.models import Teams, Users, db
@@ -12,7 +13,7 @@ from CTFd.utils.decorators import admins_only
 
 from .api import (active_docker_namespace, container_namespace,
                   docker_namespace, kill_container, secret_namespace)
-from .functions.general import get_repositories, get_docker_info
+from .functions.general import get_repositories, get_docker_info, do_request
 from .models.container import DockerChallengeType
 from .models.models import (DockerChallengeTracker, DockerConfig,
                             DockerConfigForm)
@@ -102,6 +103,33 @@ def define_docker_admin(app):
 
         return render_template("docker_config.html", config=dconfig, form=form, repos=selected_repos, info=dinfo)
 
+    @admin_docker_config.route("/admin/docker_config/pull_image", methods=["POST"])
+    @admins_only
+    def pull_image():
+        if request.method == "POST":
+            docker = DockerConfig.query.filter_by(id=1).first()
+
+            if not docker:
+                return jsonify({"error": "Docker configuration not found"}), 404
+
+            image = request.form.get('image', None)
+
+            if not image:
+                return jsonify({"error": "No image specified"}), 400
+
+            try:
+                response = do_request(docker, f"/images/create?fromImage={image}", method="POST")
+
+                if response.status_code == 200:
+                    return jsonify({"message": "Image pulled successfully"}), 200
+                else:
+                    return jsonify({"error": f"Error pulling image: {response.text}"}), response.status_code
+
+            except Exception as e:
+                return jsonify({"error": f"Error pulling image: {str(e)}"}), 500
+        else:
+            return jsonify({"error": "Invalid request method"}), 405
+
     app.register_blueprint(admin_docker_config)
 
 
@@ -112,14 +140,18 @@ def define_docker_status(app):
     @admin_docker_status.route("/admin/docker_status", methods=["GET", "POST"])
     @admins_only
     def docker_admin():
-        docker_tracker = DockerChallengeTracker.query.all()
-        for i in docker_tracker:
-            if is_teams_mode():
-                name = Teams.query.filter_by(id=i.team_id).first()
-                i.team_id = name.name
-            else:
-                name = Users.query.filter_by(id=i.user_id).first()
-                i.user_id = name.name
+        try:
+            docker_tracker = DockerChallengeTracker.query.all()
+            for i in docker_tracker:
+                if is_teams_mode():
+                    name = Teams.query.filter_by(id=i.team_id).first()
+                    i.team_id = name.name
+                else:
+                    name = Users.query.filter_by(id=i.user_id).first()
+                    i.user_id = name.name
+        except InternalError as err:
+            return render_template("admin_docker_status.html", dockers=[], error_msg=err)
+
         return render_template("admin_docker_status.html", dockers=docker_tracker)
 
     app.register_blueprint(admin_docker_status)

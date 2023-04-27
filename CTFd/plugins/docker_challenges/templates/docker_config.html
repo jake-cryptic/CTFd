@@ -82,9 +82,18 @@
                         Submit
                     </button>
                 </div>
+                <input type="hidden" name="id" value="1">
+            </form>
+            <form id="pull-image-form">
+                <span id="pull-image-status">Pull an image using this form...</span>
+                <div class="form-group">
+                    <label for="image">Image:</label>
+                    <input type="text" class="form-control" id="image" name="image"
+                           placeholder="repository/image_name:tag" required />
+                    <button type="submit">Pull Image</button>
+                </div>
+            </form>
         </div>
-        <input type="hidden" name="id" value="1">
-        </form>
     </div>
 </div>
 {% endblock content %}
@@ -99,5 +108,27 @@
         document.docker_config.client_file.required = !status;
         document.docker_config.key_file.required = !status;
     }
+
+    $('#pull-image-form').submit(function(e) {
+        e.preventDefault();
+
+        let image = $('#image').val();
+        let url = '/admin/docker_config/pull_image';
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                'image': image
+            },
+            success: function(response) {
+                $('#pull-image-status').html('<p style="color: green;">' + response.message + '</p>');
+            },
+            error: function(xhr) {
+                let response = JSON.parse(xhr.responseText);
+                $('#pull-image-status').html('<p style="color: red;">Error: ' + response.error + '</p>');
+            }
+        });
+    });
 </script>
 {% endblock scripts %}
