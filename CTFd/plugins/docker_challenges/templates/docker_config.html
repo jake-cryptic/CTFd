@@ -127,8 +127,8 @@
                 </div>
 
                 <div role="tabpanel" class="tab-pane config-section" id="login-registry">
-                    <form id="login-form">
-                        <span id="login-registry-status">Waiting for login attempt...</span>
+                    <form id="login-form" class="mb-4">
+                        <span id="login-registry-status"></span>
                         <div class="form-group">
                             <label for="username">Registry URL:</label>
                             <input type="text" class="form-control" id="registry" name="registry" required />
@@ -146,6 +146,7 @@
                         </button>
                     </form>
 
+                    <h3>Registry login list:</h3>
                     <pre id="registry_list"></pre>
                 </div>
 
@@ -258,7 +259,11 @@
             }
         })
         .then(data => {
-            list.innerHTML = '<p style="color: green;">' + data.message + '</p>';
+            if (data.message.length === 0) {
+                list.innerHTML = '<p style="color: orange;">no logged in registries in docker config...</p>';
+            } else {
+                list.innerHTML = '<p style="color: green;">' + data.message + '</p>';
+            }
         })
         .catch(error => {
             list.innerHTML = '<p style="color: red;">' + error.message + '</p>';

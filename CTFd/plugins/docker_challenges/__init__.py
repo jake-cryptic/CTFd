@@ -175,7 +175,7 @@ def define_docker_admin(app):
     @admins_only
     def get_logged_in_registries():
         registries = DockerRegistry.query.all()
-        registry_list = [registry.url for registry in registries]
+        registry_list = [f"{registry.username}@{registry.url}\n" for registry in registries]
         return jsonify({"message": registry_list}), 200
 
     app.register_blueprint(admin_docker_config)
