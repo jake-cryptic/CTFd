@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def do_request(docker: DockerConfig, url: str, headers: dict = None,
-               method: str = "GET", data: dict = None) -> list | Response:
+               method: str = "GET", data: dict | str = None) -> list | Response:
     tls = docker.tls_enabled
     prefix = "https" if tls else "http"
     host = docker.hostname

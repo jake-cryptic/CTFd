@@ -1,3 +1,4 @@
+import json
 import tempfile
 import traceback
 
@@ -16,7 +17,7 @@ from .api import (active_docker_namespace, container_namespace,
 from .functions.general import get_repositories, get_docker_info, do_request
 from .models.container import DockerChallengeType
 from .models.models import (DockerChallengeTracker, DockerConfig,
-                            DockerConfigForm)
+                            DockerConfigForm, DockerRegistry)
 from .models.service import DockerServiceChallengeType
 
 
@@ -127,17 +128,16 @@ def define_docker_admin(app):
         except Exception as e:
             return jsonify({"error": f"Error pulling image: {str(e)}"}), 500
 
-    @admin_docker_config.route("/admin/docker_config/login", methods=["POST"])
-    @admins_only
+    @admin_docker_config.route("/admin/docker_config/login", methods=["GET", "POST"])
     def docker_login():
         docker = DockerConfig.query.filter_by(id=1).first()
 
         if not docker:
             return jsonify({"error": "Docker configuration not found"}), 404
 
-        username = request.form.get('username', None)
-        password = request.form.get('password', None)
-        registry = request.form.get('registry', None)
+        username = request.args.get('username', None)
+        password = request.args.get('password', None)
+        registry = request.args.get('registry', None)
 
         if not username or not password:
             return jsonify({"error": "Username and password are required"}), 400
@@ -149,18 +149,34 @@ def define_docker_admin(app):
         }
 
         try:
-            response = do_request(docker, "/auth",
+            response = do_request(docker, f"/auth?registry={registry}",
                                   headers={"Content-Type": "application/json"},
                                   method="POST",
-                                  data=auth_data)
+                                  data=json.dumps(auth_data))
 
             if response.status_code == 200:
+                registry_entry = DockerRegistry.query.filter_by(url=registry).first()
+                if not registry_entry:
+                    registry_entry = DockerRegistry(url=registry, username=username, password=password)
+                    db.session.add(registry_entry)
+                else:
+                    registry_entry.username = username
+                    registry_entry.password = password
+
+                db.session.commit()
                 return jsonify({"message": "Docker login successful"}), 200
             else:
                 return jsonify({"error": f"Error during login: {response.text}"}), 500
 
         except Exception as e:
             return jsonify({"error": f"Error during login: {str(e)}"}), 500
+
+    @admin_docker_config.route("/admin/docker_config/logged_in_registries", methods=["GET"])
+    @admins_only
+    def get_logged_in_registries():
+        registries = DockerRegistry.query.all()
+        registry_list = [registry.url for registry in registries]
+        return jsonify({"message": registry_list}), 200
 
     app.register_blueprint(admin_docker_config)
 

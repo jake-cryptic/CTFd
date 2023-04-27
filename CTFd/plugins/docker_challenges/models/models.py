@@ -61,3 +61,15 @@ class DockerServiceChallenge(Challenges):
     docker_type = db.Column(db.String(128), index=True)
     docker_image = db.Column(db.String(128), index=True)
     docker_secrets = db.Column(db.String(4096))
+
+
+class DockerRegistry(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(255), nullable=False, unique=True)
+    username = db.Column(db.String(255), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
+
+    def __init__(self, url, username, password):
+        self.url = url
+        self.username = username
+        self.password = password

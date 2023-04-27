@@ -18,6 +18,9 @@
 				<li class="nav-item">
 					<a class="nav-link rounded-0" href="#image-pull" role="tab" data-toggle="tab">Image Pull</a>
 				</li>
+				<li class="nav-item">
+					<a class="nav-link rounded-0" href="#login-registry" role="tab" data-toggle="tab">Docker Login</a>
+				</li>
             </ul>
         </div>
         <div class="col-md-9">
@@ -123,9 +126,9 @@
                     </form>
                 </div>
 
-                <div role="tabpanel" class="tab-pane config-section" id="image-pull">
+                <div role="tabpanel" class="tab-pane config-section" id="login-registry">
                     <form id="login-form">
-                        <span id="pull-image-status">Waiting for login attempt...</span>
+                        <span id="login-registry-status">Waiting for login attempt...</span>
                         <div class="form-group">
                             <label for="username">Registry URL:</label>
                             <input type="text" class="form-control" id="registry" name="registry" required />
@@ -142,6 +145,8 @@
                             Login
                         </button>
                     </form>
+
+                    <pre id="registry_list"></pre>
                 </div>
 
             </div>
@@ -197,7 +202,7 @@
 
     function register_login_form() {
         const form = document.getElementById('login-form');
-        const message = document.getElementById('message');
+        const message = document.getElementById('login-registry-status');
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -205,16 +210,19 @@
             let registry = document.getElementById('registry').value;
             let username = document.getElementById('username').value;
             let password = document.getElementById('password').value;
-            let url = '/admin/docker_config/login';
+
+            let url = new URL(window.location.origin + '/admin/docker_config/login');
+            url.searchParams.append('registry', registry);
+            url.searchParams.append('username', username);
+            url.searchParams.append('password', password);
 
             try {
                 const response = await fetch(url, {
-                    method: 'POST',
+                    method: 'GET',
                     credentials: "same-origin",
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: 'registry=' + encodeURIComponent(registry) + 'username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password)
+                        'Accept': 'application/json'
+                    }
                 });
 
                 const data = await response.json();
@@ -224,14 +232,43 @@
                 } else {
                     message.innerHTML = '<p style="color: red;">' + data.error + '</p>';
                 }
+                get_registry_list();
             } catch (error) {
                 message.innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
             }
         });
     }
 
+    function get_registry_list() {
+        const list = document.getElementById('registry_list');
+
+        fetch('/admin/docker_config/logged_in_registries', {
+            method: 'GET',
+            credentials: "same-origin",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Error: ' + response.statusText);
+            }
+        })
+        .then(data => {
+            list.innerHTML = '<p style="color: green;">' + data.message + '</p>';
+        })
+        .catch(error => {
+            list.innerHTML = '<p style="color: red;">' + error.message + '</p>';
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         register_pull_form();
+        register_login_form();
+        get_registry_list();
     });
 </script>
 {% endblock scripts %}
