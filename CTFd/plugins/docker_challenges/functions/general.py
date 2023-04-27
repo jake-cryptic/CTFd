@@ -85,7 +85,7 @@ def get_docker_info(docker: DockerConfig) -> str:
         return 'Failed to find information required in response.'
 
     components = response['Components']
-    output = ''
+    output = 'Docker versions:\n'
     for component in components:
         output += f"{component['Name']}: {component['Version']}\n"
 
