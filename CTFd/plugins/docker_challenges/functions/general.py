@@ -1,6 +1,6 @@
 import logging
-import traceback
 import requests
+from requests import Response
 from requests.exceptions import RequestException, Timeout
 
 from ..models.models import DockerConfig
@@ -9,11 +9,15 @@ logger = logging.getLogger(__name__)
 
 
 def do_request(docker: DockerConfig, url: str, headers: dict = None,
-               method: str = "GET", data: dict = None) -> requests.Response:
+               method: str = "GET", data: dict = None) -> list | Response:
     tls = docker.tls_enabled
     prefix = "https" if tls else "http"
     host = docker.hostname
     base = f"{prefix}://{host}"
+
+    # If no host set, request will fail
+    if not host:
+        return []
 
     if not headers:
         headers = {"Content-Type": "application/json"}
@@ -45,23 +49,50 @@ def do_request(docker: DockerConfig, url: str, headers: dict = None,
 
 
 # For the Docker Config Page. Gets the Current Repositories available on the Docker Server.
-def get_repositories(docker, tags=False, repos=False):
+def get_repositories(docker: DockerConfig, tags=False, repos=False):
     r = do_request(docker, "/images/json?all=1")
+
+    if not r:
+        return []
+
     result = list()
     for i in r.json():
-        if not i["RepoTags"] == None:
-            if not i["RepoTags"][0].split(":")[0] == "<none>":
-                if repos:
-                    if not i["RepoTags"][0].split(":")[0] in repos:
-                        continue
-                if not tags:
-                    result.append(i["RepoTags"][0].split(":")[0])
-                else:
-                    result.append(i["RepoTags"][0])
+        if not i["RepoTags"] is not None:
+            continue
+
+        if not i["RepoTags"][0].split(":")[0] != "<none>":
+            continue
+
+        if repos:
+            if not i["RepoTags"][0].split(":")[0] in repos:
+                continue
+        if not tags:
+            result.append(i["RepoTags"][0].split(":")[0])
+        else:
+            result.append(i["RepoTags"][0])
+
     return list(set(result))
 
 
-def get_secrets(docker):
+def get_docker_info(docker: DockerConfig) -> str:
+    r = do_request(docker, "/version")
+
+    if not r:
+        return 'Failed to get docker version info'
+
+    response = r.json()
+    if 'Components' not in response:
+        return 'Failed to find information required in response.'
+
+    components = response['Components']
+    output = ''
+    for component in components:
+        output += f"{component['Name']}: {component['Version']}\n"
+
+    return output
+
+
+def get_secrets(docker: DockerConfig):
     r = do_request(docker, "/secrets")
     tmplist = list()
     for secret in r.json():
