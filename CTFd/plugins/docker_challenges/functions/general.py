@@ -1,61 +1,47 @@
 import logging
 import traceback
-
 import requests
+from requests.exceptions import RequestException, Timeout
 
 from ..models.models import DockerConfig
 
 logger = logging.getLogger(__name__)
 
 
-def do_request(
-        docker: DockerConfig,
-        url: str,
-        headers: dict = None,
-        method: str = "GET",
-        data: dict = None,
-) -> requests.Response:
+def do_request(docker: DockerConfig, url: str, headers: dict = None,
+               method: str = "GET", data: dict = None) -> requests.Response:
     tls = docker.tls_enabled
     prefix = "https" if tls else "http"
     host = docker.hostname
-    BASE_URL = f"{prefix}://{host}"
+    base = f"{prefix}://{host}"
+
     if not headers:
         headers = {"Content-Type": "application/json"}
+
+    request_args = {
+        'url': f"{base}{url}",
+        'headers': headers,
+        'method': method
+    }
+
+    if data:
+        request_args['data'] = data
+
+    if tls:
+        request_args['cert'] = (docker.client_cert, docker.client_key)
+        request_args['verify'] = False
+
+    logging.info(f'Request to Docker: {request_args["method"]} {request_args["url"]}')
+
+    resp = []
     try:
-        if tls:
-            if method == "GET":
-                r = requests.get(
-                    url=f"{BASE_URL}{url}",
-                    cert=(docker.client_cert, docker.client_key),
-                    verify=False,
-                    headers=headers,
-                )
-            elif method == "POST":
-                r = requests.post(
-                    url=f"{BASE_URL}{url}",
-                    cert=(docker.client_cert, docker.client_key),
-                    verify=False,
-                    headers=headers,
-                    data=data,
-                )
-            elif method == "DELETE":
-                r = requests.delete(
-                    url=f"{BASE_URL}{url}",
-                    cert=(docker.client_cert, docker.client_key),
-                    verify=False,
-                    headers=headers,
-                )
-        else:
-            if method == "GET":
-                r = requests.get(url=f"{BASE_URL}{url}", headers=headers)
-            elif method == "POST":
-                r = requests.post(url=f"{BASE_URL}{url}", headers=headers, data=data)
-            elif method == "DELETE":
-                r = requests.delete(url=f"{BASE_URL}{url}", headers=headers)
-    except:
-        print(traceback.print_exc())
-        r = []
-    return r
+        resp = requests.request(**request_args)
+    except Timeout:
+        logging.error("Request timed out.")
+    except RequestException as e:
+        logging.error(f"An error occurred while making the request: {e}")
+
+    return resp
 
 
 # For the Docker Config Page. Gets the Current Repositories available on the Docker Server.
