@@ -24,7 +24,8 @@ services:
     depends_on:
       - db
     networks:
-        internal:
+      internal:
+      default:
 
   nginx:
     container_name: ctfd_nginx
@@ -37,8 +38,8 @@ services:
     depends_on:
       - ctfd
     networks:
-        internal:
-        default:
+      internal:
+      default:
 
   db:
     container_name: ctfd_database
@@ -52,7 +53,7 @@ services:
     volumes:
       - .data/mysql:/var/lib/mysql
     networks:
-        internal:
+      internal:
     # This command is required to set important mariadb defaults
     command: [mysqld, --character-set-server=utf8mb4, --collation-server=utf8mb4_unicode_ci, --wait_timeout=28800, --log-warnings=0]
 
@@ -63,9 +64,9 @@ services:
     volumes:
     - .data/redis:/data
     networks:
-        internal:
+      internal:
 
 networks:
     default:
     internal:
-        internal: true
+      internal: true

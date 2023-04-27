@@ -48,18 +48,18 @@ def define_docker_admin(app):
             except:
                 print(traceback.print_exc())
                 client_key = ''
-            if len(ca_cert) != 0: 
-                tmpca = tempfile.NamedTemporaryFile(mode="wb",dir="/tmp", delete=False)
+            if len(ca_cert) != 0:
+                tmpca = tempfile.NamedTemporaryFile(mode="wb", dir="/tmp", delete=False)
                 tmpca.write(ca_cert)
                 tmpca.seek(0)
                 b.ca_cert = tmpca.name
             if len(client_cert) != 0:
-                tmpcert = tempfile.NamedTemporaryFile(mode="wb",dir="/tmp", delete=False)
+                tmpcert = tempfile.NamedTemporaryFile(mode="wb", dir="/tmp", delete=False)
                 tmpcert.write(client_cert)
                 tmpcert.seek(0)
                 b.client_cert = tmpcert.name
-            if len(client_key) != 0: 
-                tmpkey = tempfile.NamedTemporaryFile(mode="wb",dir="/tmp", delete=False)
+            if len(client_key) != 0:
+                tmpkey = tempfile.NamedTemporaryFile(mode="wb", dir="/tmp", delete=False)
                 tmpkey.write(client_key)
                 tmpkey.seek(0)
                 b.client_key = tmpkey.name
@@ -122,9 +122,6 @@ def define_docker_status(app):
         return render_template("admin_docker_status.html", dockers=docker_tracker)
 
     app.register_blueprint(admin_docker_status)
-
-
-
 
 
 def load(app):

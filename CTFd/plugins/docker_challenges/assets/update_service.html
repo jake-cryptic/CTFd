@@ -9,7 +9,8 @@
 </div>
 <div class="form-group">
     <label for="DockerImage" id='dockerimage_label'>Docker Image:
-        <i class="far fa-question-circle text-muted cursor-help" data-toggle="tooltip" data-placement="right" title="The docker image for your challenge"></i>
+        <i class="far fa-question-circle text-muted cursor-help" data-toggle="tooltip" data-placement="right"
+           title="The docker image for your challenge"></i>
     </label>
     <select id="dockerimage_select" name="docker_image" class="form-control" required></select>
 </div>
@@ -20,22 +21,22 @@
     <select id='dockersecrets_select' name="docker_secrets" class='form-control' size='10' multiple>
     </select>
     <script>
-        document.querySelector('#dockersecrets_select').addEventListener('change', function() {
+        document.querySelector('#dockersecrets_select').addEventListener('change', function () {
             document.querySelector('#docker_secrets_input').value = Array.from(this.selectedOptions).map(opt => opt.value).join(',');
         });
 
-        document.querySelector('form').addEventListener('submit', function() {
+        document.querySelector('form').addEventListener('submit', function () {
             document.querySelector('#dockersecrets_select').dispatchEvent(new Event('change'));
             document.querySelector('[name=docker_secrets]').remove();
         });
     </script>
-    
-    <input type="hidden" name="docker_secrets_array" id="docker_secrets_input">         
+
+    <input type="hidden" name="docker_secrets_array" id="docker_secrets_input">
 </div>
 {% endblock %}
 {% block footer %}
 <script>
-var DOCKER_IMAGE = '{{ challenge.docker_image }}';
-var SECRETS = '{{ challenge.docker_secrets }}';
+    var DOCKER_IMAGE = '{{ challenge.docker_image }}';
+    var SECRETS = '{{ challenge.docker_secrets }}';
 </script>
 {% endblock %}

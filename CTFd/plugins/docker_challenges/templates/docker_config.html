@@ -85,16 +85,14 @@
 {% endblock content %}
 {% block scripts %}
 <script>
-
-function enable_file_form(status) {
-    status=!status; 
-    document.docker_config.ca_file.disabled = status;
-    document.docker_config.client_file.disabled = status;
-    document.docker_config.key_file.disabled = status;
-    document.docker_config.ca_file.required = !status;
-    document.docker_config.client_file.required = !status;
-    document.docker_config.key_file.required = !status;
-}
-
+    function enable_file_form(status) {
+        status = !status;
+        document.docker_config.ca_file.disabled = status;
+        document.docker_config.client_file.disabled = status;
+        document.docker_config.key_file.disabled = status;
+        document.docker_config.ca_file.required = !status;
+        document.docker_config.client_file.required = !status;
+        document.docker_config.key_file.required = !status;
+    }
 </script>
 {% endblock scripts %}

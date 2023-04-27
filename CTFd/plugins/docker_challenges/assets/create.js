@@ -9,18 +9,17 @@ CTFd.plugin.run((_CTFd) => {
             );
         }
     });
-    $(document).ready(function(){
-    $('[data-toggle="tooltip"]').tooltip();
-    $.getJSON("/api/v1/docker", function(result){
-        $.each(result['data'], function(i, item){
-            if (item.name == 'Error in Docker Config!') { 
-                document.docker_form.dockerimage_select.disabled = true;
-                $("label[for='DockerImage']").text('Docker Image ' + item.name)
-            }
-            else {
-                $("#dockerimage_select").append($("<option />").val(item.name).text(item.name));
-            }
+    $(document).ready(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+        $.getJSON("/api/v1/docker", function (result) {
+            $.each(result['data'], function (i, item) {
+                if (item.name == 'Error in Docker Config!') {
+                    document.docker_form.dockerimage_select.disabled = true;
+                    $("label[for='DockerImage']").text('Docker Image ' + item.name)
+                } else {
+                    $("#dockerimage_select").append($("<option />").val(item.name).text(item.name));
+                }
+            });
         });
     });
-});
 });
