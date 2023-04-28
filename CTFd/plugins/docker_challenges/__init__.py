@@ -1,3 +1,4 @@
+import base64
 import json
 import tempfile
 import traceback
@@ -116,8 +117,18 @@ def define_docker_admin(app):
         if not image:
             return jsonify({"error": "No image specified"}), 400
 
+        registry = 'registry.hub.docker.com'
+        if '/' in image:
+            registry = image.split('/')[0]
+
+        registry_auth = DockerRegistry.query.filter_by(url=registry).first()
+        if not registry_auth:
+            return jsonify({"error": f"No registry authentication found in DB for: {registry}"}), 403
+
         try:
-            response = do_request(docker, f"/images/create?fromImage={image}", method="POST")
+            auth_token = base64.b64encode(f"{registry_auth.username}:{registry_auth.password}".encode("utf-8")).decode("utf-8")
+            response = do_request(docker, f"/images/create?fromImage={image}",
+                                  headers={"X-Registry-Auth": auth_token}, method="POST")
 
             if response.status_code == 200:
                 return jsonify({"message": "Image pulled successfully"}), 200
