@@ -3,7 +3,6 @@ import tempfile
 import traceback
 
 from flask import Blueprint, render_template, request, jsonify
-from sqlalchemy.exc import InternalError
 
 from CTFd.api import CTFd_API_v1
 from CTFd.models import Teams, Users, db
@@ -197,7 +196,7 @@ def define_docker_status(app):
                 else:
                     name = Users.query.filter_by(id=i.user_id).first()
                     i.user_id = name.name
-        except InternalError as err:
+        except Exception as err:
             return render_template("admin_docker_status.html", dockers=[], error_msg=err)
 
         return render_template("admin_docker_status.html", dockers=docker_tracker)
