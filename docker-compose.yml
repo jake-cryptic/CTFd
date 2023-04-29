@@ -26,6 +26,8 @@ services:
     networks:
       internal:
       default:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   nginx:
     container_name: ctfd_nginx
