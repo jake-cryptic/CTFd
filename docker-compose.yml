@@ -18,8 +18,8 @@ services:
       - ERROR_LOG=-
       - REVERSE_PROXY=true
     volumes:
-      - .data/CTFd/logs:/var/log/CTFd
-      - .data/CTFd/uploads:/var/uploads
+      - .data-prod/CTFd/logs:/var/log/CTFd
+      - .data-prod/CTFd/uploads:/var/uploads
       - .:/opt/CTFd:ro
     depends_on:
       - db
@@ -53,7 +53,7 @@ services:
       - MYSQL_PASSWORD=ctfd
       - MYSQL_DATABASE=ctfd
     volumes:
-      - .data/mysql:/var/lib/mysql
+      - .data-prod/mysql:/var/lib/mysql
     networks:
       internal:
     # This command is required to set important mariadb defaults
@@ -64,7 +64,7 @@ services:
     image: redis:7.0-alpine3.17
     restart: always
     volumes:
-    - .data/redis:/data
+    - .data-prod/redis:/data
     networks:
       internal:
 
